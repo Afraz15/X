@@ -1,0 +1,12 @@
+so that means that in the client, it will make or get a dummy_db ?
+
+
+Yes, the client will make or get a dummy_db database. The use command in MongoDB creates a database if it does not exist, otherwise it switches to the existing database.
+In the code snippet you provided, the dummy_client variable is a reference to a MongoDB client object. The dummy_client['dummy_db'] expression returns a reference to the dummy_db database
+db.collection.insert_one({
+    "name": "John Doe",
+    "age": 30
+})
+
+
+
