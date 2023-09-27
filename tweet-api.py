@@ -1,9 +1,9 @@
-from fastapi import FastAPI, Body, Depends, Header
+from fastapi import FastAPI, Body, Depends, Header, Request
 from pydantic import BaseModel, Field
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timedelta
 import passlib.hash
 # import requests
 import http
@@ -17,12 +17,18 @@ class User(BaseModel):
     password: str
 
 
+class Login(BaseModel):
+    email: str
+    password: str
+
+
 class getUser(BaseModel):
     id: int
 
 
 class Tweet(BaseModel):
     # user_id: int = Field(..., ref="users")
+    # client_jwt: str
     text: str
     # created_at: datetime
 
@@ -49,32 +55,36 @@ def get_database():
         return None
 
 
-def generate_jwt(user_id: int) -> str:
+def generate_jwt(user_id: str) -> str:
     payload = {
         'user_id': user_id,
-        'expires': datetime.utcnow() + timedelta(minutes=60),
-        'issued': datetime.utcnow()
+        'expires': (datetime.utcnow() + timedelta(minutes=60)).isoformat(),
+        'issued': (datetime.utcnow()).isoformat()
     }
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 
+# def check_if_hash(password: str, hashed)
+
 # make an object as user class
-def get_current_user(client_jwt_token: str = Depends(Header("Authorization"))) -> User:
+def get_current_user(jwt_token: str):
     try:
-        payload = jwt.decode(client_jwt_token, SECRET_KEY,
-                             algorithms=["HS256"])
+        jwt_token = (jwt_token.split("Bearer")[1]).replace(" ", "")
+
+        jwt_payload = jwt.decode(jwt_token, SECRET_KEY, algorithms=["HS256"])
+        client_id = jwt_payload["user_id"]
+        # print(client_id)
+        return (client_id)
     except jwt.ExpiredSignatureError:
-        raise http.HTTPException(
-            status_code=401, detail="Signature has expired")
+        {"message": "Signature has expired"}
     except jwt.InvalidTokenError:
-        raise http.HTTPException(status_code=401, detail="Invalid token")
-    user_id = payload.get("user_id")
-    if user_id is None:
-        raise http.HTTPException(status_code=401, detail="Invalid token")
-    user = get_user(user_id)
-    if user is None:
-        raise http.HTTPException(status_code=401, detail="Invalid token")
-    return user
+        {"message": "Signature Invalid expired"}
+    ''' 
+
+    '''
+    # user = get_user(user_id)
+    # if user is None:
+    #     raise http.HTTPException(status_code=401, detail="Invalid token")
 
 
 @app.get('/')
@@ -94,6 +104,53 @@ async def get_users(db: MongoClient = Depends(get_database)):
     return modified_users[4]["password"]
     # return passlib.hash.bcrypt.verify("john5", modified_users[4]["password"])
     # return True
+
+
+@app.post("/user/login")
+async def login(client_data: Login = Body(...), db: MongoClient = Depends(get_database)):
+    # try:
+    EmailUserFromDB = db['users'].find_one({"email": client_data.email})
+    # user_payload
+    # print(generate_jwt(str(EmailUserFromDB['_id'])))
+
+    match EmailUserFromDB:
+        case None:
+            return {"message": f"user with this email: {client_data['email']} does dot exist"}
+        case _:
+            # print('in _ case')
+            match ("password" in EmailUserFromDB['password']):
+                case True:
+                    user_payload = generate_jwt(
+                        str(EmailUserFromDB['_id']))
+                    # print()
+                    print(user_payload)
+                case False:
+                    decode_hash = passlib.hash.bcrypt.verify(
+                        client_data.password, EmailUserFromDB['password'])
+                    print(f"hash password: {decode_hash}")
+                    match decode_hash:
+                        case True:
+                            user_payload = generate_jwt(
+                                str(EmailUserFromDB['_id']))
+                            print(jwt.decode(user_payload,
+                                  SECRET_KEY, algorithms='HS256'))
+                            return user_payload
+                        case False:
+                            return {"message": f"{EmailUserFromDB['email']} and password are not correct"}
+'''
+    '''
+
+# userExistPassword = passlib.hash.bcrypt.verify(
+#     client_data['password'], EmailUserFromDB["password"])
+# userData = [EmailUserFromDB, userExistPassword]
+
+# match bool(userData[EmailUserFromDB]['email']) and userData[userExistPassword]:
+#     case True:
+#         generate_jwt(EmailUserFromDB["_id"])
+#     case False:
+#         return {"message": f"user with this email: {client_data['email']} does dot exist"}
+# # except:
+# return {"message": f"{EmailUserFromDB['email']} and password are not correct"}
 
 """"
 password not hashed
@@ -134,12 +191,23 @@ async def get_tweets(db: MongoClient = Depends(get_database)):
 
 
 @app.post("/tweets")
-async def create_tweet(tweet: Tweet = Body(...), db: MongoClient = Depends(get_database)):
+# async def create_tweet(tweet: Tweet = Body(...), authorization: str = Header("authentication")):
+async def create_tweet(tweet: Tweet = Body(...), authorization: str = Header("authentication"), db: MongoClient = Depends(get_database)):
+    # async def create_tweet(tweet: Tweet = Body(...)):
+    client_jwt = get_current_user(authorization)
     tweet_data = tweet.model_dump()
-    tweet_data['user_id'] = tweetUser
-    tweet_data['createdAt'] = datetime.now()
+    tweet_data['user_id'] = client_jwt
+    tweet_data['createdAt'] = datetime.utcnow()
     inserted_tweet = db['tweets'].insert_one(tweet_data)
+
     return tweet
+
+    # print(authorization)
+
+    # print(authorization)
+    # payload = jwt.decode(tweet_data.client_jwt,
+    #                      SECRET_KEY, algorithms=["HS256"])
+    # return {"message": f"the payload is {tweet_data['client_jwt']}"}
 
 
 if __name__ == "__main__":

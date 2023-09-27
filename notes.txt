@@ -8,5 +8,46 @@ db.collection.insert_one({
     "age": 30
 })
 
+now i was not in the mood of creating documentations and all so i let bard do this in my stead:
+
+Libraries
+
+    FastAPI: A modern, fast (high-performance), web framework for building APIs with Python 3.6+ based on standard Python type hints.
+    Pydantic: A data validation and parsing library for Python 3.6+ based on standard Python type hints.
+    PyMongo: A Python driver for MongoDB.
+    Passlib: A comprehensive password hashing library for Python.
+    JWT: A JSON Web Token implementation for Python.
+    Uvicorn: A lightning-fast ASGI server, built on top of uvloop and httptools.
+
+Data flow
+
+The data flow in the code is as follows:
+
+    The user makes a request to the API.
+    FastAPI routes the request to the appropriate endpoint.
+    The endpoint function validates the request data using Pydantic.
+    The endpoint function uses PyMongo to interact with the database.
+    The endpoint function generates a response and returns it to the user.
+
+What happens when
+
+When a user makes a request to the /login endpoint, the following happens:
+
+    FastAPI routes the request to the login() function.
+    The login() function validates the request data using Pydantic.
+    The login() function uses PyMongo to find the user in the database.
+    If the user is found, the login() function generates a JWT token and returns it to the user.
+    If the user is not found, the login() function returns an error message.
+
+When a user makes a request to the /tweets endpoint, the following happens:
+
+    FastAPI routes the request to the get_tweets() function.
+    The get_tweets() function uses PyMongo to find all of the tweets in the database.
+    The get_tweets() function returns the tweets to the user.
+
+Conclusion
+
+This is a simple example of how to use FastAPI, Pydantic, PyMongo, Passlib, JWT, and Uvicorn to build a web API.
+
 
 
