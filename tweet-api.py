@@ -10,6 +10,7 @@ import passlib.hash
 import http
 import jwt
 import uvicorn
+from decouple import config
 
 
 class User(BaseModel):
@@ -36,12 +37,16 @@ class Tweet(BaseModel):
 
 app = FastAPI()
 
-uri = "mongodb+srv://tweet:tweet@tweet-api.jfdpjg3.mongodb.net/?retryWrites=true&w=majority"
-SECRET_KEY = 'John-5'
+# uri = "mongodb+srv://tweet:tweet@tweet-api.jfdpjg3.mongodb.net/?retryWrites=true&w=majority"
+# SECRET_KEY = 'John-5'
 
-origins = [
-    "http://localhost:5173",
-]
+# origins = [
+#     "http://localhost:5173",
+# ]
+
+uri = config('MONGODB_URI')
+SECRET_KEY = config('SECRET_KEY')
+origins = [config('ALLOWED_ORIGINS')]
 
 app.add_middleware(
     CORSMiddleware,
@@ -141,7 +146,8 @@ async def login(client_data: Login = Body(...), db: MongoClient = Depends(get_da
                         client_data.password, EmailUserFromDB['password'])
                     # dbPass = passlib.hash.bcrypt.verify(EmailUserFromDB["password"])
                     dbPass = 'hello'
-                    print(f"hash password: dbPass={EmailUserFromDB['password']}; {decode_hash} and {client_data.password} and db={dbPass}")
+                    print(
+                        f"hash password: dbPass={EmailUserFromDB['password']}; {decode_hash} and {client_data.password} and db={dbPass}")
                     match decode_hash:
                         case True:
                             user_payload = generate_jwt(
