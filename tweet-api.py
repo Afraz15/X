@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from bson import ObjectId
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
 import passlib.hash
 # import requests
@@ -38,7 +39,17 @@ app = FastAPI()
 uri = "mongodb+srv://tweet:tweet@tweet-api.jfdpjg3.mongodb.net/?retryWrites=true&w=majority"
 SECRET_KEY = 'John-5'
 
-tweetUser = ''
+origins = [
+    "http://localhost:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_database():
@@ -101,7 +112,8 @@ async def get_users(db: MongoClient = Depends(get_database)):
         modified_users.append(i)
 
         print(i)
-    return modified_users[4]["password"]
+    return modified_users
+    # return modified_users[4]["password"]
     # return passlib.hash.bcrypt.verify("john5", modified_users[4]["password"])
     # return True
 
@@ -127,7 +139,9 @@ async def login(client_data: Login = Body(...), db: MongoClient = Depends(get_da
                 case False:
                     decode_hash = passlib.hash.bcrypt.verify(
                         client_data.password, EmailUserFromDB['password'])
-                    print(f"hash password: {decode_hash}")
+                    # dbPass = passlib.hash.bcrypt.verify(EmailUserFromDB["password"])
+                    dbPass = 'hello'
+                    print(f"hash password: dbPass={EmailUserFromDB['password']}; {decode_hash} and {client_data.password} and db={dbPass}")
                     match decode_hash:
                         case True:
                             user_payload = generate_jwt(
